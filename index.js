@@ -1,35 +1,49 @@
 'use strict';
 
-const Constants = require('./src/util/Constants');
+const { Client, LocalAuth } = require('./index.js'); // tu librería
+const qrcode = require('qrcode-terminal');
+const readline = require('readline');
 
-module.exports = {
-    Client: require('./src/Client'),
-    
-    version: require('./package.json').version,
+// Crear cliente con LocalAuth
+const client = new Client({
+    authStrategy: new LocalAuth(),
+    puppeteer: { headless: true } // Puppeteer no se usará en Termux
+});
 
-    // Structures
-    Chat: require('./src/structures/Chat'),
-    PrivateChat: require('./src/structures/PrivateChat'),
-    GroupChat: require('./src/structures/GroupChat'),
-    Channel: require('./src/structures/Channel'),
-    Message: require('./src/structures/Message'),
-    MessageMedia: require('./src/structures/MessageMedia'),
-    Contact: require('./src/structures/Contact'),
-    PrivateContact: require('./src/structures/PrivateContact'),
-    BusinessContact: require('./src/structures/BusinessContact'),
-    ClientInfo: require('./src/structures/ClientInfo'),
-    Location: require('./src/structures/Location'),
-    Poll: require('./src/structures/Poll'),
-    ScheduledEvent: require('./src/structures/ScheduledEvent'),
-    ProductMetadata: require('./src/structures/ProductMetadata'),
-    List: require('./src/structures/List'),
-    Buttons: require('./src/structures/Buttons'),
-    Broadcast: require('./src/structures/Broadcast'),
-    
-    // Auth Strategies
-    NoAuth: require('./src/authStrategies/NoAuth'),
-    LocalAuth: require('./src/authStrategies/LocalAuth'),
-    RemoteAuth: require('./src/authStrategies/RemoteAuth'),
-    
-    ...Constants
-};
+// Evento: cliente listo
+client.on('ready', async () => {
+    console.log('✅ Bot conectado a WhatsApp!');
+
+    // Si no está registrado, pedimos código de emparejamiento
+    if(!client.info) {
+        const phoneNumber = '59898719147'; // tu número de WhatsApp sin + ni espacios
+        console.log(`Generando código de emparejamiento para: ${phoneNumber}...`);
+
+        const code = await client.getPairingCode(phoneNumber);
+        const formattedCode = code.match(/.{1,4}/g).join('-');
+        console.log(`📌 Tu código de vinculación: ${formattedCode}`);
+        console.log('Pega este código en WhatsApp → Dispositivos vinculados → Vincular un dispositivo → Usar código de emparejamiento');
+    }
+});
+
+// Evento: mensajes entrantes
+client.on('message', async message => {
+    console.log(`Mensaje de ${message.from}: ${message.body}`);
+
+    // Comando de prueba
+    if(message.body === '!ping') {
+        message.reply('pong');
+    }
+
+    // Comando .menu
+    if(message.body === '.menu') {
+        message.reply(
+`📜 *Comandos disponibles:*
+!ping - Responde pong
+.menu - Muestra este menú`
+        );
+    }
+});
+
+// Inicializar el cliente
+client.initialize();
